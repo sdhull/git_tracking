@@ -2,8 +2,8 @@ class GitTracking
   class Config
     def initialize
       @config = {:raise_on_incomplete_merge => true, :raise_on_debugger => true}
-      if File.exists? ".git_tracking.config"
-        @config.merge! YAML.load_file(".git_tracking.config")
+      if File.exists? ".git_tracking"
+        @config.merge! YAML.load_file(".git_tracking")
       end
     end
 
