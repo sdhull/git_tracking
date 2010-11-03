@@ -3,17 +3,11 @@ require 'ruby-debug'
 
 describe GitTracking do
   before(:all) do
-    File.rename ".git", ".git_old" if File.exists? ".git"
-  end
-
-  before(:each) do
-    do_cmd "rm -rf .git" if File.exists? ".git"
-    do_cmd "git init; git add README; git commit -m 'initial commit'"
+    @original_git_author = `git config --global user.name`.chomp
   end
 
   after(:all) do
-    do_cmd "rm -rf .git" if File.exists? ".git"
-    File.rename ".git_old", ".git" if File.exists? ".git_old"
+    system "git config --global user.name '#{@original_git_author}'"
   end
 
   it ".pre_commit should call detect_debuggers and detect_incomplete_merges" do
@@ -22,75 +16,127 @@ describe GitTracking do
     GitTracking.pre_commit
   end
 
-  describe ".detect_debuggers" do
-    context "configured to reject commits with debuggers" do
-      it "should detect debuggers and raise DebuggerException" do
-        GitTracking.config.stub(:raise_on_debugger).and_return(true)
-        make_foo_file "debugger"
-        do_cmd "git add foo.txt"
-        GitTracking.highline.should_receive("say").with("foo.txt:debugger")
-        lambda{GitTracking.detect_debuggers}.should raise_error(DebuggerException, "Please remove debuggers prior to committing")
-      end
+
+  describe ".story" do
+    let(:story) {mock('story', :name => 'Best feature evar', :id => 12345)}
+
+    it "should require a story" do
+      GitTracking.class_eval {@story = nil}
+      GitTracking.highline.should_receive(:ask).with("Please enter a valid Pivotal Tracker story id: ", an_instance_of(Proc)).and_return(story)
+      GitTracking.story.should == story
     end
 
-    context "configured to simply warn about commits with debuggers" do
-      it "should detect debuggers" do
-        GitTracking.config.stub(:raise_on_debugger).and_return(false)
-        make_foo_file "debugger"
-        do_cmd "git add foo.txt"
-        GitTracking.highline.should_receive("say").with("foo.txt:debugger")
-        lambda{GitTracking.detect_debuggers}.should_not raise_error
-      end
+    it "should allow you to enter an alternate story" do
+      the_story = story
+      GitTracking.class_eval {@story = the_story}
+      GitTracking.highline.should_receive(:say).with("Found a valid story id in your branch or commit: 12345 - Best feature evar")
+      GitTracking.highline.should_receive(:ask).with("Hit enter to confirm story id 12345, or enter some other story id: ", an_instance_of(Proc)).and_return(story)
+      GitTracking.story.should == story
     end
   end
 
-  describe ".detect_incomplete_merges" do
-    context "configured to reject commits with incomplete merges" do
-      it "should detect incomplete merges and raise IncompleteMergeException" do
-        GitTracking.config.stub(:raise_on_incomplete_merge).and_return(true)
-        make_foo_file "<<<<<<<", "your changes", "=======", "my changes", ">>>>>>>"
-        do_cmd "git add foo.txt"
-        GitTracking.highline.should_receive("say").with("foo.txt:<<<<<<<\nfoo.txt:>>>>>>>")
-        lambda{GitTracking.detect_incomplete_merges}.should raise_error(IncompleteMergeException, "Please complete your merge prior to committing")
-      end
+  describe ".check_story_id" do
+    before(:each) do
+      GitTracking.stub(:api_key).and_return(5678)
     end
 
-    context "configured to simply warn about commits with incomplete merges" do
-      it "should detect incomplete merges and raise IncompleteMergeException" do
-        GitTracking.config.stub(:raise_on_incomplete_merge).and_return(false)
-        make_foo_file "<<<<<<<", "your changes", "=======", "my changes", ">>>>>>>"
-        do_cmd "git add foo.txt"
-        GitTracking.highline.should_receive("say").with("foo.txt:<<<<<<<\nfoo.txt:>>>>>>>")
-        lambda{GitTracking.detect_incomplete_merges}.should_not raise_error(IncompleteMergeException, "Please complete your merge prior to committing")
-      end
+    it "should return true for story id that can be found in tracker" do
+      PivotalTracker::Project.stub(:find).and_return(mock("project"))
+      GitTracking.pivotal_project.should_receive(:stories).and_return(mock("stories", :find => mock("story")))
+      GitTracking.check_story_id(5678).should be_true
+    end
+
+    it "should return false for a valid story id" do
+      PivotalTracker::Project.stub(:find).and_return(mock("project"))
+      GitTracking.pivotal_project.should_receive(:stories).and_return(mock("stories", :find => nil))
+      GitTracking.check_story_id(5678).should be_false
     end
   end
 
-  describe "#story" do
-    it "should require a story"
-    context "the branch name has a valid story id" do
-      it "should output the story name"
+  describe ".api_key" do
+    it "should prompt for a pivotal login" do
+      GitTracking.stub(:author).and_return("Steve & Ghost Co-Pilot")
+      GitTracking.class_eval {@api_key = nil}
+      GitTracking.highline.should_receive(:ask).with("Enter your PivotalTracker email: ").and_return("john@doe.com")
+      GitTracking.highline.should_receive(:ask).with("Enter your PivotalTracker password: ").and_return("password")
+      PivotalTracker::Client.should_receive(:token).with("john@doe.com", "password").and_return("0987654567")
+      GitTracking.api_key.should == "0987654567"
     end
-    it "should remember the last story id used"
-    it "should prompt for an alternate story id"
+
+    it "should prompt you to enter an alternate pivotal login" do
+      GitTracking.stub(:author).and_return("Steve & Ghost Co-Pilot")
+      GitTracking.class_eval {@api_key = "0987654567"}
+      GitTracking.highline.should_receive(:say).with("Found a pivotal api key: 0987654567")
+      GitTracking.highline.should_receive(:ask).with("Hit enter to use the api key 0987654567, or enter your email to change it")
+      GitTracking.api_key.should == "0987654567"
+    end
+
+    it "should allow you to enter an alternate pivotal login" do
+      GitTracking.stub(:author).and_return("Steve & Ghost Co-Pilot")
+      GitTracking.class_eval {@api_key = "0987654567"}
+      GitTracking.highline.should_receive(:say).with("Found a pivotal api key: 0987654567")
+      GitTracking.highline.should_receive(:ask).with("Hit enter to use the api key 0987654567, or enter your email to change it").and_return("john@doe.com")
+      GitTracking.highline.should_receive(:ask).with("Enter your PivotalTracker password: ").and_return("password")
+      PivotalTracker::Client.should_receive(:token).with("john@doe.com", "password").and_return("0987654567")
+      GitTracking.api_key.should == "0987654567"
+    end
   end
-  it "should output the current git author"
-  it "should prompt for an alternate git author"
-end
 
-def make_foo_file(*content)
-  f = File.new("foo.txt", "w")
-  f.puts *content
-  f.close
-end
+  describe ".get_story" do
+    before(:each) do
+      GitTracking.stub(:api_key).and_return(5678)
+    end
 
-def do_cmd(command)
-  orig_stdout = $stdout
+    it "should return true for story id that can be found in tracker" do
+      story = mock("story")
+      PivotalTracker::Project.stub(:find).and_return(mock("project"))
+      GitTracking.pivotal_project.should_receive(:stories).and_return(mock("stories", :find => story))
+      GitTracking.get_story(5678).should == story
+    end
 
-  # redirect stdout to /dev/null
-  $stdout = File.new('/dev/null', 'w')
-  system command
-ensure
-  # restore stdout
-  $stdout = orig_stdout
+    it "should return false for a valid story id" do
+      PivotalTracker::Project.stub(:find).and_return(mock("project"))
+      GitTracking.pivotal_project.should_receive(:stories).and_return(mock("stories", :find => nil))
+      GitTracking.get_story(5678).should be_nil
+    end
+  end
+
+  describe ".author" do
+    it "should prompt for a author" do
+      original_author = `git config --global user.name`.chomp
+      system "git config --global --unset user.name"
+      GitTracking.class_eval {@author = nil}
+      GitTracking.highline.should_receive(:ask).with("Please enter the git author: ").and_return("Steve & Ghost Co-Pilot")
+      GitTracking.author.should == "Steve & Ghost Co-Pilot"
+    end
+
+    it "should allow you to enter an alternate author" do
+      GitTracking.class_eval {@author = "Steve & Ghost Co-Pilot"}
+      GitTracking.highline.should_receive(:say).with("git author set to: Steve & Ghost Co-Pilot")
+      GitTracking.highline.should_receive(:ask).with("Hit enter to confirm author, or enter new author: ").and_return("")
+      GitTracking.author.should == "Steve & Ghost Co-Pilot"
+    end
+  end
+
+  describe ".prepare_commit_msg" do
+    it "should get the message" do
+      File.open("foo.txt", "w") do |f|
+        f.print "My awesome commit msg!"
+      end
+      ARGV[0] = "foo.txt"
+      GitTracking.should_receive(:story_info).and_return "[#12345] Best feature evar"
+      GitTracking.prepare_commit_msg
+      commit_msg = File.open("foo.txt", "r").read
+      commit_msg.should == <<STRING
+[#12345] Best feature evar
+
+  - My awesome commit msg!
+STRING
+    end
+  end
+
+  it ".story_info should format the story info appropriately" do
+    GitTracking.should_receive(:story).twice.and_return(mock("story", :name => "Best feature evar", :id => "12345"))
+    GitTracking.story_info.should == "[#12345] Best feature evar"
+  end
 end
