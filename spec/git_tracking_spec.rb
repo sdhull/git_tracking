@@ -101,6 +101,38 @@ describe GitTracking do
     end
   end
 
+  describe ".pivotal_project" do
+    before(:each) { GitTracking.instance_variable_set("@pivotal_project", nil) }
+    it "should get the token" do
+      project = mock("project")
+      PivotalTracker::Project.should_receive(:find).and_return(project)
+      GitTracking.should_receive(:api_key).and_return("alksjd9123lka")
+      GitTracking.pivotal_project.should == project
+    end
+
+    it "should get and use the project_id from config" do
+      project = mock("project")
+      GitTracking.stub(:api_key)
+      GitTracking.config.should_receive(:project_id).and_return(1235)
+      PivotalTracker::Project.should_receive(:find).with(1235).and_return(project)
+      GitTracking.pivotal_project.should == project
+    end
+  end
+
+  describe ".project_id" do
+    it "should prompt you to enter the project id if there is none defined" do
+      GitTracking.config.stub(:project_id).ordered.and_return(nil)
+      GitTracking.config.stub(:project_id).with(54876).ordered.and_return(54876)
+      GitTracking.highline.should_receive(:ask).with("Please enter the PivotalTracker project id for this project").and_return(54876)
+      GitTracking.project_id.should == 54876
+    end
+
+    it "should get the project id from the config" do
+      GitTracking.config.should_receive(:project_id).twice.and_return(9712)
+      GitTracking.project_id.should == 9712
+    end
+  end
+
   describe ".check_story_id" do
     before(:each) do
       GitTracking.stub(:api_key).and_return(5678)
@@ -121,30 +153,30 @@ describe GitTracking do
 
   describe ".api_key" do
     it "should prompt for a pivotal login" do
-      GitTracking.stub(:author).and_return("Steve & Ghost Co-Pilot")
-      GitTracking.class_eval {@api_key = nil}
-      GitTracking.highline.should_receive(:ask).with("Enter your PivotalTracker email: ").and_return("john@doe.com")
+      GitTracking.config.stub(:emails).and_return(["steve@home.com", "john@doe.com"])
+      GitTracking.config.should_receive(:add_email)
+      GitTracking.config.should_receive(:key_for_email).with("other@work.net").ordered.and_return(nil)
+      GitTracking.config.should_receive(:key_for_email).with("other@work.net", "0987654567").ordered
+      GitTracking.highline.should_receive(:choose).with(["steve@home.com", "john@doe.com"]).and_return("other@work.net")
       GitTracking.highline.should_receive(:ask).with("Enter your PivotalTracker password: ").and_return("password")
-      PivotalTracker::Client.should_receive(:token).with("john@doe.com", "password").and_return("0987654567")
+      PivotalTracker::Client.should_receive(:token).with("other@work.net", "password").and_return("0987654567")
       GitTracking.api_key.should == "0987654567"
     end
 
     it "should prompt you to enter an alternate pivotal login" do
-      GitTracking.stub(:author).and_return("Steve & Ghost Co-Pilot")
-      GitTracking.class_eval {@api_key = "0987654567"}
-      GitTracking.highline.should_receive(:say).with("Found a pivotal api key: 0987654567")
-      GitTracking.highline.should_receive(:ask).with("Hit enter to use the api key 0987654567, or enter your email to change it")
-      GitTracking.api_key.should == "0987654567"
+      GitTracking.config.stub(:emails).and_return(["steve@home.com", "john@doe.com"])
+      GitTracking.config.stub(:key_for_email).and_return("8876567898")
+      GitTracking.highline.should_receive(:choose).with(["steve@home.com", "john@doe.com"]).and_return("steve@home.com")
+      GitTracking.api_key.should == "8876567898"
     end
 
-    it "should allow you to enter an alternate pivotal login" do
-      GitTracking.stub(:author).and_return("Steve & Ghost Co-Pilot")
-      GitTracking.class_eval {@api_key = "0987654567"}
-      GitTracking.highline.should_receive(:say).with("Found a pivotal api key: 0987654567")
-      GitTracking.highline.should_receive(:ask).with("Hit enter to use the api key 0987654567, or enter your email to change it").and_return("john@doe.com")
-      GitTracking.highline.should_receive(:ask).with("Enter your PivotalTracker password: ").and_return("password")
-      PivotalTracker::Client.should_receive(:token).with("john@doe.com", "password").and_return("0987654567")
-      GitTracking.api_key.should == "0987654567"
+    it "should allow you to re-enter your password if authentication fails" do
+      GitTracking.config.stub(:emails).and_return(["steve@home.com", "john@doe.com"])
+      GitTracking.config.stub(:key_for_email).and_return(nil)
+      GitTracking.highline.should_receive(:choose).and_return("other@work.net")
+      GitTracking.highline.should_receive(:ask).exactly(3).times.and_return("password")
+      PivotalTracker::Client.should_receive(:token).exactly(3).times.and_raise(RestClient::Request::Unauthorized)
+      lambda{GitTracking.api_key}.should raise_error(RestClient::Request::Unauthorized)
     end
   end
 
@@ -192,6 +224,7 @@ describe GitTracking do
       end
       ARGV = ["foo.txt"]
       GitTracking.stub(:story_info).and_return "[#12345] Best feature evar"
+      GitTracking.stub(:author).and_return "Steve & Ghost Co-Pilot"
       GitTracking.prepare_commit_msg
       commit_msg = File.open("foo.txt", "r").read
       commit_msg.should == <<STRING

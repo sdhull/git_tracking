@@ -48,7 +48,18 @@ class GitTracking
     def pivotal_project
       return @pivotal_project if @pivotal_project
       PivotalTracker::Client.token = api_key
-      PivotalTracker::Project.find(234)
+      @pivotal_project = PivotalTracker::Project.find(config.project_id)
+    end
+
+    def project_id
+      return config.project_id if config.project_id
+      id = highline.ask("Please enter the PivotalTracker project id for this project") do |q|
+        q.validate = lambda do |a|
+          PivotalTracker::Client.token = api_key
+          PivotalTracker::Project.find(a) rescue false
+        end
+      end
+      config.project_id(id)
     end
 
     def story_info
@@ -98,16 +109,27 @@ class GitTracking
     end
 
     def api_key
-      if @api_key
-        highline.say("Found a pivotal api key: #{@api_key}")
-        email = highline.ask("Hit enter to use the api key #{@api_key}, or enter your email to change it")
-        email = nil if email == ""
+      message, retry_count = nil, 0
+      email = highline.choose(config.emails) do |menu|
+        menu.choice("Enter new") { highline.ask("New Email: ") }
       end
-
-      if @api_key.nil? || email
-        email = highline.ask("Enter your PivotalTracker email: ") unless email
-        password = highline.ask("Enter your PivotalTracker password: ") {|q| q.echo "x" }
-        @api_key = PivotalTracker::Client.token(email, password)
+      config.add_email(email)
+      unless @api_key = config.key_for_email(email)
+        begin
+          highline.say message if message
+          password = highline.ask("Enter your PivotalTracker password: ") {|q| q.echo "x" }
+          @api_key = PivotalTracker::Client.token(email, password)
+          config.key_for_email(email, @api_key)
+        rescue RestClient::Request::Unauthorized
+          retry_count += 1
+          message = "401 Unauthorized. Please try again."
+          if retry_count < 3
+            retry
+          else
+            highline.say("Unable to authenticate to Pivotal Tracker. Exiting...")
+            raise RestClient::Request::Unauthorized
+          end
+        end
       end
 
       @api_key

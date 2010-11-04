@@ -9,7 +9,7 @@ if File.exists?(".git") && File.directory?(".git")
 
   unless File.exists?(".git_tracking")
     File.open(".git_tracking", "w") do |file|
-      YAML.dump(GitTracking.config.instance_variable_get("@config"), file)
+      YAML.dump(GitTracking.write_to_file, file)
     end
   else
     puts "Not writing .git_tracking config file, as it already exists"
