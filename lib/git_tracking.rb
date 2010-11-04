@@ -16,10 +16,12 @@ class PreCommitException < Exception; end
 class DebuggerException < PreCommitException; end
 class IncompleteMergeException < PreCommitException; end
 
+HighLine.track_eof = false
+
 class GitTracking
   class << self
     def highline
-      @highline ||= HighLine.new
+      @highline ||= HighLine.new($stdin.reopen("/dev/tty", "a+"), $stdout)
     end
 
     def config
@@ -27,7 +29,7 @@ class GitTracking
     end
 
     def commit_message
-      File.read(ARGV[0])
+      @commit_message ||= File.read(ARGV[0])
     end
 
     def pre_commit
@@ -37,18 +39,18 @@ class GitTracking
 
     def prepare_commit_msg
       author
-      original_message = commit_message
+      commit_message
       File.open(ARGV[0], "w") do |f|
         f.puts story_info
         f.puts
-        f.puts "  - #{original_message}"
+        f.puts "  - #{commit_message}"
       end
     end
 
     def pivotal_project
       return @pivotal_project if @pivotal_project
       PivotalTracker::Client.token = api_key
-      @pivotal_project = PivotalTracker::Project.find(config.project_id)
+      @pivotal_project = PivotalTracker::Project.find(project_id)
     end
 
     def project_id
@@ -88,11 +90,15 @@ class GitTracking
     end
 
     def story_id
-      @story_id ||= extract_story_id(commit_message) || extract_story_id(branch) || config.git[:last_story_id]
+      highline.say("ARGV[0] = #{ARGV[0]}")
+      highline.say("commit message = '#{commit_message}'")
+      @story_id ||= (extract_story_id(commit_message) || extract_story_id(branch) || config.git[:last_story_id])
     end
 
     def extract_story_id(string)
+      highline.say("about to try to extract story id from '#{string}'")
       the_story_id = string.match(/\d{5,}/)[0] if string.match(/\d{5,}/)
+      highline.say("about to check story id#: #{the_story_id}")
       return the_story_id if check_story_id(the_story_id)
     end
 
@@ -109,15 +115,17 @@ class GitTracking
     end
 
     def api_key
+      return @api_key if @api_key
       message, retry_count = nil, 0
       email = highline.choose(config.emails) do |menu|
+        menu.header = "Pivotal Tracker email"
         menu.choice("Enter new") { highline.ask("New Email: ") }
       end
-      config.add_email(email)
-      unless @api_key = config.key_for_email(email)
+      config.add_email(email.to_s)
+      unless @api_key = config.key_for_email(email.to_s)
         begin
           highline.say message if message
-          password = highline.ask("Enter your PivotalTracker password: ") {|q| q.echo "x" }
+          password = highline.ask("Enter your PivotalTracker password: ") {|q| q.echo = "x" }
           @api_key = PivotalTracker::Client.token(email, password)
           config.key_for_email(email, @api_key)
         rescue RestClient::Request::Unauthorized
@@ -140,7 +148,7 @@ class GitTracking
     end
 
     def get_story(id)
-      pivotal_project.stories.find(id)
+      pivotal_project.stories.find(id.to_i)
     end
   end
 end

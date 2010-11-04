@@ -29,6 +29,10 @@ class GitTracking
       write_to_file
     end
 
+    def git
+      {}
+    end
+
     def key_for_email(email, key=nil)
       return @config[:keys][email] if key.nil?
       @config[:keys][email] = key
