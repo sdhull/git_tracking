@@ -1,0 +1,38 @@
+#!/usr/bin/env ruby
+
+require 'lib/git_tracking'
+
+puts "Thanks for installing the git_tracking gem!"
+
+if File.exists?(".git") && File.directory?(".git")
+  GitTracking.config
+
+  unless File.exists?(".git_tracking")
+    File.open(".git_tracking", "w") do |file|
+      YAML.dump(GitTracking.config.instance_variable_get("@config"), file)
+    end
+  else
+    puts "Not writing .git_tracking config file, as it already exists"
+  end
+
+  unless File.exists?(".git/hooks/pre-commit") && File.read(".git/hooks/pre-commit").include?("GitTracking")
+    File.open(".git/hooks/pre-commit", "a") do |file|
+      file.print File.read(File.expand_path("../../hooks/pre-commit", __FILE__))
+    end
+    system "chmod +x .git/hooks/pre-commit"
+  else
+    puts "Not writing pre-commit hook, as it already exists"
+  end
+
+  unless File.exists?(".git/hooks/prepare-commit-msg") && File.read(".git/hooks/prepare-commit-msg").include?("GitTracking")
+    File.open(".git/hooks/prepare-commit-msg", "a") do |file|
+      file.print File.read(File.expand_path("../../hooks/prepare-commit-msg", __FILE__))
+    end
+    system "chmod +x .git/hooks/prepare-commit-msg"
+  else
+    puts "Not writing prepare-commit-msg hook, as it already exists"
+  end
+else
+  puts "Error: No .git directory found. The git_tracking gem can only be used in a project tracked by git"
+  exit 1
+end
