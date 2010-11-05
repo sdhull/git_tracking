@@ -54,7 +54,7 @@ describe GitTracking do
   describe ".story_id" do
     before(:each) do
       GitTracking.stub(:check_story_id).and_return(true)
-      GitTracking.class_eval{@story_id = nil}
+      GitTracking.instance_eval{@story_id = nil}
     end
 
     it "should check the commit message for a story id" do
@@ -70,7 +70,7 @@ describe GitTracking do
 
     it "should check the .git/config file for the last story id" do
       GitTracking.stub!(:commit_message).and_return("Fixing Javascript")
-      GitTracking.config.stub!(:git).and_return({:last_api_key => "fdskah32891", :last_story_id => '35236'})
+      GitTracking.config.should_receive(:last_story_id).and_return('35236')
       GitTracking.story_id.should == '35236'
     end
 
@@ -113,7 +113,7 @@ describe GitTracking do
     it "should get and use the project_id from config" do
       project = mock("project")
       GitTracking.stub(:api_key)
-      GitTracking.config.should_receive(:project_id).and_return(1235)
+      GitTracking.should_receive(:project_id).and_return(1235)
       PivotalTracker::Project.should_receive(:find).with(1235).and_return(project)
       GitTracking.pivotal_project.should == project
     end
@@ -152,6 +152,7 @@ describe GitTracking do
   end
 
   describe ".api_key" do
+    before(:each) { GitTracking.instance_eval{ @api_key = nil} }
     it "should prompt for a pivotal login" do
       GitTracking.config.stub(:emails).and_return(["steve@home.com", "john@doe.com"])
       GitTracking.config.should_receive(:add_email)
@@ -200,19 +201,27 @@ describe GitTracking do
   end
 
   describe ".author" do
+    before(:each) { GitTracking.instance_eval{ @author = nil } }
     it "should prompt for a author" do
-      original_author = `git config --global user.name`.chomp
-      system "git config --global --unset user.name"
-      GitTracking.class_eval {@author = nil}
+      GitTracking.config.stub(:author).and_return("")
       GitTracking.highline.should_receive(:ask).with("Please enter the git author: ").and_return("Steve & Ghost Co-Pilot")
+      GitTracking.config.should_receive(:author=).with("Steve & Ghost Co-Pilot")
+      GitTracking.author.should == "Steve & Ghost Co-Pilot"
+    end
+
+    it "should prompt you to enter an alternate author, but allow you to dismiss" do
+      GitTracking.config.stub(:author).and_return("Steve & Ghost Co-Pilot")
+      GitTracking.highline.should_receive(:say).with("git author set to: Steve & Ghost Co-Pilot")
+      GitTracking.highline.should_receive(:ask).with("Hit enter to confirm author, or enter new author: ").and_return("")
       GitTracking.author.should == "Steve & Ghost Co-Pilot"
     end
 
     it "should allow you to enter an alternate author" do
-      GitTracking.class_eval {@author = "Steve & Ghost Co-Pilot"}
+      GitTracking.config.stub(:author).and_return("Steve & Ghost Co-Pilot")
       GitTracking.highline.should_receive(:say).with("git author set to: Steve & Ghost Co-Pilot")
-      GitTracking.highline.should_receive(:ask).with("Hit enter to confirm author, or enter new author: ").and_return("")
-      GitTracking.author.should == "Steve & Ghost Co-Pilot"
+      GitTracking.highline.should_receive(:ask).with("Hit enter to confirm author, or enter new author: ").and_return("a GHOST!")
+      GitTracking.config.should_receive(:author=).with("a GHOST!")
+      GitTracking.author.should == "a GHOST!"
     end
   end
 

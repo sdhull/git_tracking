@@ -29,12 +29,28 @@ class GitTracking
       write_to_file
     end
 
-    def git
-      {}
+    def author
+      `git config user.name`.chomp
+    end
+
+    def author=(new_author)
+      system "git config user.name '#{new_author}'"
+    end
+
+    [:last_story_id, :last_api_key].each do |config_item|
+      git_config_key = config_item.to_s.gsub("_","-")
+      define_method(config_item) do
+        `git config git-tracking.#{git_config_key}`.chomp
+      end
+
+      define_method("#{config_item}=") do |value|
+        system "git config git-tracking.#{git_config_key} '#{value}'"
+      end
     end
 
     def key_for_email(email, key=nil)
-      return @config[:keys][email] if key.nil?
+      return (self.last_api_key = @config[:keys][email]) if key.nil?
+      self.last_api_key = key
       @config[:keys][email] = key
       write_to_file
     end

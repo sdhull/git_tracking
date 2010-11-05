@@ -90,7 +90,7 @@ class GitTracking
     end
 
     def story_id
-      @story_id ||= (extract_story_id(commit_message) || extract_story_id(branch) || config.git[:last_story_id])
+      @story_id ||= (extract_story_id(commit_message) || extract_story_id(branch) || config.last_story_id)
     end
 
     def extract_story_id(string)
@@ -99,15 +99,15 @@ class GitTracking
     end
 
     def author
-      if @author || (@author = `git config --global user.name`.chomp) != ""
+      return @author if @author
+      if (@author = config.author) != ""
         highline.say("git author set to: #{@author}")
         new_author = highline.ask("Hit enter to confirm author, or enter new author: ")
         @author = new_author if new_author != ""
       else
         @author = highline.ask("Please enter the git author: ")
       end
-      system "git config --global user.name '#{@author}'"
-      @author
+      config.author = @author
     end
 
     def api_key

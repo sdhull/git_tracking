@@ -1,6 +1,20 @@
 require 'lib/git_tracking'
 
 describe GitTracking::Config do
+  before(:all) do
+    File.rename ".git_tracking", ".git_tracking.real" if File.exists?(".git_tracking")
+    @orig_author = `git config user.name`.chomp
+    @orig_last_api_key = `git config git-tracking.last-api-key`.chomp
+    @orig_last_story_id = `git config git-tracking.last-story-id`.chomp
+  end
+
+  after(:all) do
+    File.rename ".git_tracking.real", ".git_tracking" if File.exists?(".git_tracking.real")
+    system "git config user.name '#{@orig_author}'"
+    system "git config git-tracking.last-api-key '#{@orig_last_api_key}'"
+    system "git config git-tracking.last-story-id '#{@orig_last_story_id}'"
+  end
+
   after(:each) { File.delete(".git_tracking") if File.exists?(".git_tracking") }
   let(:config) { GitTracking::Config.new }
 
@@ -42,6 +56,36 @@ describe GitTracking::Config do
     config.emails.should == ["foo@bar.com", "baz@bang.com"]
   end
 
+  it "#author should return the user.name value from the git config" do
+    system "git config user.name 'Steve'"
+    config.author.should == 'Steve'
+  end
+
+  it "#author= should set the user.name in the git config" do
+    (config.author='Ghost').should == "Ghost"
+    `git config user.name`.chomp.should == "Ghost"
+  end
+
+  it "#last_story_id should return the git-tracking.last-story-id from git config" do
+    system "git config git-tracking.last-story-id '736741'"
+    config.last_story_id.should == '736741'
+  end
+
+  it "#last_story_id= should set the git-tracking.last-story-id in git config" do
+    (config.last_story_id='234900').should == '234900'
+    `git config git-tracking.last-story-id`.chomp.should == '234900'
+  end
+
+  it "#last_api_key should return the git-tracking.last-api-key from git config" do
+    system "git config git-tracking.last-api-key '736741'"
+    config.last_api_key.should == '736741'
+  end
+
+  it "#last_api_key= should set the git-tracking.last-api-key in git config" do
+    (config.last_api_key='123444').should == '123444'
+    `git config git-tracking.last-api-key`.chomp.should == '123444'
+  end
+
   describe "#add_email" do
     it "should add the email and store it" do
       config.emails.should_not include("foo@bar.com")
@@ -73,16 +117,28 @@ describe GitTracking::Config do
     it "should return the pivotal api key" do
       config.instance_eval do
         @config[:keys] = {
-          "foo@bar.com" => "kdslghj348",
+          "foo@bar.com" => "alsdkjf91",
           "baz@bang.com" => "dsgkj39dk3"
         }
       end
-      config.key_for_email("foo@bar.com").should == 'kdslghj348'
+      config.key_for_email("foo@bar.com").should == 'alsdkjf91'
     end
 
     it "should set the pivotal api key and store it" do
       config.key_for_email("foo@bar.com", 'kdslghj348')
       YAML.load_file(".git_tracking")[:keys]["foo@bar.com"].should == 'kdslghj348'
+    end
+
+    it "should set the last_api_key as well" do
+      config.should_receive(:last_api_key=).with('kdslghj348').ordered
+      config.should_receive(:last_api_key=).with('dsgkj39dk3').ordered
+      config.key_for_email("foo@bar.com", 'kdslghj348')
+      config.instance_eval do
+        @config[:keys] = {
+          "baz@bang.com" => "dsgkj39dk3"
+        }
+      end
+      config.key_for_email("baz@bang.com")
     end
   end
 
