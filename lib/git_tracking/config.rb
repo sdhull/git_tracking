@@ -4,7 +4,6 @@ class GitTracking
       @config = {
         :raise_on_incomplete_merge => true,
         :raise_on_debugger => true,
-        :emails => [],
         :keys => {}
       }
       if File.exists? ".git_tracking"
@@ -21,12 +20,7 @@ class GitTracking
     end
 
     def emails
-      @config[:emails]
-    end
-
-    def add_email(email)
-      @config[:emails].push(email) unless emails.include?(email)
-      write_to_file
+      @config[:keys].keys
     end
 
     def author

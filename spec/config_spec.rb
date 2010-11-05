@@ -23,13 +23,11 @@ describe GitTracking::Config do
     config_hash.should == {
         :raise_on_incomplete_merge => true,
         :raise_on_debugger => true,
-        :emails => [],
         :keys => {}
     }
     special_options = {
       :raise_on_incomplete_merge => false,
-      :raise_on_debugger => false,
-      :emails => ["your@mom.com"]
+      :raise_on_debugger => false
     }
     File.open(".git_tracking", "w") do |file|
       YAML.dump(special_options, file)
@@ -52,7 +50,12 @@ describe GitTracking::Config do
   end
 
   it "#emails should return an array of email addresses" do
-    config.instance_eval { @config[:emails] = ["foo@bar.com", "baz@bang.com"] }
+    config.instance_eval do
+      @config[:keys] = {
+        "foo@bar.com" => "alsdkjf91",
+        "baz@bang.com" => "dsgkj39dk3"
+      }
+    end
     config.emails.should == ["foo@bar.com", "baz@bang.com"]
   end
 
@@ -84,21 +87,6 @@ describe GitTracking::Config do
   it "#last_api_key= should set the git-tracking.last-api-key in git config" do
     (config.last_api_key='123444').should == '123444'
     `git config git-tracking.last-api-key`.chomp.should == '123444'
-  end
-
-  describe "#add_email" do
-    it "should add the email and store it" do
-      config.emails.should_not include("foo@bar.com")
-      config.add_email("foo@bar.com")
-      config.emails.should include("foo@bar.com")
-      YAML.load_file(".git_tracking")[:emails].should include("foo@bar.com")
-    end
-
-    it "should not add the email twice" do
-      config.instance_eval { @config[:emails] = ["foo@bar.com", "baz@bang.com"] }
-      config.add_email("foo@bar.com")
-      config.emails.should == ["foo@bar.com", "baz@bang.com"]
-    end
   end
 
   describe "#project_id" do

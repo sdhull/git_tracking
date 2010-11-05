@@ -117,7 +117,6 @@ class GitTracking
         menu.header = "Pivotal Tracker email"
         menu.choice("Enter new") { highline.ask("New Email: ") }
       end
-      config.add_email(email.to_s)
       unless @api_key = config.key_for_email(email.to_s)
         begin
           highline.say message if message
