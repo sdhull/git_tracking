@@ -90,15 +90,11 @@ class GitTracking
     end
 
     def story_id
-      highline.say("ARGV[0] = #{ARGV[0]}")
-      highline.say("commit message = '#{commit_message}'")
       @story_id ||= (extract_story_id(commit_message) || extract_story_id(branch) || config.git[:last_story_id])
     end
 
     def extract_story_id(string)
-      highline.say("about to try to extract story id from '#{string}'")
       the_story_id = string.match(/\d{5,}/)[0] if string.match(/\d{5,}/)
-      highline.say("about to check story id#: #{the_story_id}")
       return the_story_id if check_story_id(the_story_id)
     end
 

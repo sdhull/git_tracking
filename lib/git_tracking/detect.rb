@@ -13,7 +13,7 @@ class GitTracking
       file_names = `git diff-index --cached -S'<<<<<<<' --name-only HEAD`.chomp.split
       file_names += `git diff-index --cached -S'>>>>>>>' --name-only HEAD`.chomp.split
       file_names = file_names.uniq.join("\n")
-      if file_names
+      if file_names != ""
         highline.say highline.color("The following files have incomplete merges: ", :red)
         highline.say file_names
         raise IncompleteMergeException,
