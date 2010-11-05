@@ -1,7 +1,8 @@
 class GitTracking
   class << self
     def detect_debuggers
-      if (messages = `git grep --cached -I "debugger"`.chomp) != ""
+      if (messages = `git diff-index --cached -Sdebugger --name-only HEAD`.chomp) != ""
+        highline.say highline.color("The following files have 'debugger' statements in them: ", :red)
         highline.say messages
         raise DebuggerException,
           "Please remove debuggers prior to committing" if config.raise_on_debugger
@@ -9,8 +10,12 @@ class GitTracking
     end
 
     def detect_incomplete_merges
-      if (messages = `git grep --cached -I -E "^<<<<<<<|^>>>>>>>" *`.chomp) != ""
-        highline.say messages
+      file_names = `git diff-index --cached -S'<<<<<<<' --name-only HEAD`.chomp.split
+      file_names += `git diff-index --cached -S'>>>>>>>' --name-only HEAD`.chomp.split
+      file_names = file_names.uniq.join("\n")
+      if file_names
+        highline.say highline.color("The following files have incomplete merges: ", :red)
+        highline.say file_names
         raise IncompleteMergeException,
           "Please complete your merge prior to committing" if config.raise_on_incomplete_merge
       end

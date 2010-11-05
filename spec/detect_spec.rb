@@ -24,8 +24,10 @@ describe GitTracking, "detect" do
         GitTracking.config.stub(:raise_on_debugger).and_return(true)
         make_foo_file "debugger"
         do_cmd "git add foo.txt"
-        GitTracking.highline.should_receive("say").with("foo.txt:debugger")
-        lambda{GitTracking.detect_debuggers}.should raise_error(DebuggerException, "Please remove debuggers prior to committing")
+        GitTracking.highline.should_receive("say")
+        GitTracking.highline.should_receive("say").with("foo.txt")
+        lambda{GitTracking.detect_debuggers}.should(
+          raise_error(DebuggerException, "Please remove debuggers prior to committing"))
       end
     end
 
@@ -34,7 +36,8 @@ describe GitTracking, "detect" do
         GitTracking.config.stub(:raise_on_debugger).and_return(false)
         make_foo_file "debugger"
         do_cmd "git add foo.txt"
-        GitTracking.highline.should_receive("say").with("foo.txt:debugger")
+        GitTracking.highline.should_receive("say")
+        GitTracking.highline.should_receive("say").with("foo.txt")
         lambda{GitTracking.detect_debuggers}.should_not raise_error
       end
     end
@@ -46,8 +49,10 @@ describe GitTracking, "detect" do
         GitTracking.config.stub(:raise_on_incomplete_merge).and_return(true)
         make_foo_file "<<<<<<<", "your changes", "=======", "my changes", ">>>>>>>"
         do_cmd "git add foo.txt"
-        GitTracking.highline.should_receive("say").with("foo.txt:<<<<<<<\nfoo.txt:>>>>>>>")
-        lambda{GitTracking.detect_incomplete_merges}.should raise_error(IncompleteMergeException, "Please complete your merge prior to committing")
+        GitTracking.highline.should_receive("say")
+        GitTracking.highline.should_receive("say").with("foo.txt")
+        lambda{GitTracking.detect_incomplete_merges}.should(
+          raise_error(IncompleteMergeException, "Please complete your merge prior to committing"))
       end
     end
 
@@ -56,8 +61,10 @@ describe GitTracking, "detect" do
         GitTracking.config.stub(:raise_on_incomplete_merge).and_return(false)
         make_foo_file "<<<<<<<", "your changes", "=======", "my changes", ">>>>>>>"
         do_cmd "git add foo.txt"
-        GitTracking.highline.should_receive("say").with("foo.txt:<<<<<<<\nfoo.txt:>>>>>>>")
-        lambda{GitTracking.detect_incomplete_merges}.should_not raise_error(IncompleteMergeException, "Please complete your merge prior to committing")
+        GitTracking.highline.should_receive("say")
+        GitTracking.highline.should_receive("say").with("foo.txt")
+        lambda{GitTracking.detect_incomplete_merges}.should_not(
+          raise_error(IncompleteMergeException, "Please complete your merge prior to committing"))
       end
     end
   end
