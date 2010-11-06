@@ -49,7 +49,7 @@ class GitTracking
 
     def post_commit
       @api_key = config.last_api_key
-      @story_id = config.last_story_id
+      story = get_story(config.last_story_id)
       story.notes.create(:text => config.last_commit_info)
     end
 
@@ -88,6 +88,9 @@ class GitTracking
           q.validate = lambda{|a| check_story_id(a)}
         end
       end
+      config.last_story_id = @story.id
+
+      @story
     end
 
     def branch

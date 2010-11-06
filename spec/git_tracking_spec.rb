@@ -64,6 +64,7 @@ STRING
       GitTracking.stub(:story_id).and_return("")
       GitTracking.stub(:get_story).and_return(nil)
       GitTracking.highline.should_receive(:ask).with("Please enter a valid Pivotal Tracker story id: ", an_instance_of(Proc)).and_return(the_story)
+      GitTracking.config.should_receive(:last_story_id=).with(12345)
       GitTracking.story.should == the_story
     end
 
@@ -75,13 +76,14 @@ STRING
     end
 
     it "should allow you to enter an alternate story when it finds a story_id" do
-      the_story = mock('story', :name => 'Best feature evar', :id => 12345)
+      the_story = mock('story', :name => 'Best feature evar', :id => 85918)
       GitTracking.stub(:story_id).and_return(the_story.id)
       GitTracking.stub(:get_story).and_return(the_story)
+      GitTracking.config.should_receive(:last_story_id=).with(85918)
       GitTracking.highline.should_receive(:say).
-        with("Found a valid story id in your branch or commit: 12345 - Best feature evar")
+        with("Found a valid story id in your branch or commit: 85918 - Best feature evar")
       GitTracking.highline.should_receive(:ask).
-        with("Hit enter to confirm story id 12345, or enter some other story id: ", an_instance_of(Proc)).
+        with("Hit enter to confirm story id 85918, or enter some other story id: ", an_instance_of(Proc)).
         and_return(the_story)
       GitTracking.story.should == the_story
     end
