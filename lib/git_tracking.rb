@@ -3,6 +3,7 @@ $:.unshift this_dir unless $:.include? this_dir
 
 # stdlib
 require 'ftools'
+require 'yaml'
 
 # gems
 require 'highline'

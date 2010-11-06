@@ -1,6 +1,11 @@
 #!/usr/bin/env ruby
 
-require 'lib/git_tracking'
+begin
+  require 'git_tracking'
+rescue LoadError
+  require 'rubygems'
+  require 'git_tracking'
+end
 
 puts "Thanks for installing the git_tracking gem!"
 
