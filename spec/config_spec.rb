@@ -23,6 +23,7 @@ describe GitTracking::Config do
     config_hash.should == {
         :raise_on_incomplete_merge => true,
         :raise_on_debugger => true,
+        :authors => [],
         :keys => {}
     }
     special_options = {
@@ -64,9 +65,30 @@ describe GitTracking::Config do
     config.author.should == 'Steve'
   end
 
-  it "#author= should set the user.name in the git config" do
-    (config.author='Ghost').should == "Ghost"
-    `git config user.name`.chomp.should == "Ghost"
+  describe "#author=" do
+    it "should set the user.name in the git config" do
+      (config.author='Ghost').should == "Ghost"
+      `git config user.name`.chomp.should == "Ghost"
+    end
+
+    it "should add the author to the list in .git_tracking file" do
+      config.instance_eval { @config[:authors] = ["Joe"] }
+      config.author = "Steve"
+      config.authors.should include("Steve")
+      YAML.load_file(".git_tracking")[:authors].should include("Steve")
+    end
+
+    it "should not add the author more than once" do
+      config.instance_eval { @config[:authors] = ["Joe"] }
+      config.author = "Joe"
+      config.authors.should == ["Joe"]
+      YAML.load_file(".git_tracking")[:authors].should == ["Joe"]
+    end
+  end
+
+  it "#authors should return an array of authors" do
+    config.instance_eval { @config[:authors] = ["Joe", "Bob", "Steve"] }
+    config.authors.should == ["Joe", "Bob", "Steve"]
   end
 
   it "#last_story_id should return the git-tracking.last-story-id from git config" do

@@ -4,6 +4,7 @@ class GitTracking
       @config = {
         :raise_on_incomplete_merge => true,
         :raise_on_debugger => true,
+        :authors => [],
         :keys => {}
       }
       if File.exists? ".git_tracking"
@@ -31,7 +32,13 @@ class GitTracking
       `git config user.name`.chomp
     end
 
+    def authors
+      @config[:authors]
+    end
+
     def author=(new_author)
+      @config[:authors].push(new_author).uniq!
+      write_to_file
       system "git config user.name '#{new_author}'"
     end
 
