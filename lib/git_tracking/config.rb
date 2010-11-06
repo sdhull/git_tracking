@@ -28,6 +28,10 @@ class GitTracking
       @config[:keys].invert[last_api_key].first
     end
 
+    def last_commit_info
+      `git log -n 1 --oneline --abbrev-commit`
+    end
+
     def author
       `git config user.name`.chomp
     end

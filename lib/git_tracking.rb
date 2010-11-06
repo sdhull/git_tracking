@@ -47,6 +47,12 @@ class GitTracking
       end
     end
 
+    def post_commit
+      @api_key = config.last_api_key
+      @story_id = config.last_story_id
+      story.notes.create(:text => config.last_commit_info)
+    end
+
     def pivotal_project
       return @pivotal_project if @pivotal_project
       PivotalTracker::Client.token = api_key

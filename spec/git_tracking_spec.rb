@@ -17,6 +17,42 @@ describe GitTracking do
     GitTracking.pre_commit
   end
 
+  describe ".prepare_commit_msg" do
+    it "should get the message" do
+      old_argv = ARGV
+      File.open("foo.txt", "w") do |f|
+        f.print "My awesome commit msg!"
+      end
+      ARGV = ["foo.txt"]
+      GitTracking.stub(:story_info).and_return "[#12345] Best feature evar"
+      GitTracking.stub(:author).and_return "Steve & Ghost Co-Pilot"
+      GitTracking.prepare_commit_msg
+      commit_msg = File.open("foo.txt", "r").read
+      commit_msg.should == <<STRING
+[#12345] Best feature evar
+
+  - My awesome commit msg!
+STRING
+      ARGV = old_argv
+    end
+
+    it "should call story_info and author" do
+      ARGV = ["foo.txt"]
+      GitTracking.should_receive(:story_info).and_return "[#12345] Best feature evar"
+      GitTracking.should_receive(:author)
+      GitTracking.prepare_commit_msg
+    end
+  end
+
+  it ".post_commit should create a comment on the story with the commit msg and hash" do
+    notes = mock("notes")
+    GitTracking.stub(:story)
+    GitTracking.should_not_receive(:story_id)
+    GitTracking.story.should_receive(:notes).and_return(notes)
+    GitTracking.config.should_receive(:last_commit_info).and_return("984752 [#27491] Best commit evar")
+    notes.should_receive(:create).with(:text => "984752 [#27491] Best commit evar")
+    GitTracking.post_commit
+  end
 
   describe ".story" do
     before do
@@ -206,33 +242,6 @@ describe GitTracking do
     GitTracking.highline.should_receive(:choose).with("Ghost", "Steve").and_return("Derrick")
     GitTracking.config.should_receive(:author=).with("Derrick")
     GitTracking.author.should == "Derrick"
-  end
-
-  describe ".prepare_commit_msg" do
-    it "should get the message" do
-      old_argv = ARGV
-      File.open("foo.txt", "w") do |f|
-        f.print "My awesome commit msg!"
-      end
-      ARGV = ["foo.txt"]
-      GitTracking.stub(:story_info).and_return "[#12345] Best feature evar"
-      GitTracking.stub(:author).and_return "Steve & Ghost Co-Pilot"
-      GitTracking.prepare_commit_msg
-      commit_msg = File.open("foo.txt", "r").read
-      commit_msg.should == <<STRING
-[#12345] Best feature evar
-
-  - My awesome commit msg!
-STRING
-      ARGV = old_argv
-    end
-
-    it "should call story_info and author" do
-      ARGV = ["foo.txt"]
-      GitTracking.should_receive(:story_info).and_return "[#12345] Best feature evar"
-      GitTracking.should_receive(:author)
-      GitTracking.prepare_commit_msg
-    end
   end
 
   it ".story_info should format the story info appropriately" do

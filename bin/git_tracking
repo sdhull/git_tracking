@@ -30,6 +30,15 @@ if File.exists?(".git") && File.directory?(".git")
   else
     puts "Not writing prepare-commit-msg hook, as it already exists"
   end
+
+  unless File.exists?(".git/hooks/post-commit") && File.read(".git/hooks/post-commit").include?("GitTracking")
+    File.open(".git/hooks/post-commit", "a") do |file|
+      file.print File.read(File.expand_path("../../hooks/post-commit", __FILE__))
+    end
+    system "chmod +x .git/hooks/post-commit"
+  else
+    puts "Not writing post-commit hook, as it already exists"
+  end
 else
   puts "Error: No .git directory found. The git_tracking gem can only be used in a project tracked by git"
   exit 1

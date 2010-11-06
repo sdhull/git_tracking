@@ -91,6 +91,29 @@ describe GitTracking::Config do
     config.authors.should == ["Joe", "Bob", "Steve"]
   end
 
+  describe "#last_commit_info" do
+    before(:all) do
+      File.rename ".git", ".git_old" if File.exists? ".git"
+    end
+    before(:each) do
+      system "git init; git add README; git commit -m 'initial commit'"
+    end
+    after(:each) do
+      File.delete "foo.txt" if File.exists? "foo.txt"
+      system "rm -rf .git" if File.exists? ".git"
+    end
+    after(:all) do
+      File.rename ".git_old", ".git" if File.exists? ".git_old"
+    end
+
+    it "should return info about the last commit" do
+      f = File.new("foo.txt", "w") {|f| f.puts "lalala"}
+      system "git add foo.txt"
+      system "git commit -m 'best commit evar'"
+      config.last_commit_info.should match(/\w{6,8} best commit evar/)
+    end
+  end
+
   it "#last_story_id should return the git-tracking.last-story-id from git config" do
     system "git config git-tracking.last-story-id '736741'"
     config.last_story_id.should == '736741'
