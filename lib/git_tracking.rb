@@ -71,8 +71,7 @@ class GitTracking
     def story
       return @story if @story
 
-      if story_id
-        story = get_story(story_id)
+      if story_id && story = get_story(story_id)
         highline.say("Found a valid story id in your branch or commit: #{story.id} - #{story.name}")
         @story = highline.ask("Hit enter to confirm story id #{story.id}, or enter some other story id: ", lambda{|a| get_story(a)}) do |q|
           q.default =  story.id
@@ -114,7 +113,7 @@ class GitTracking
     def api_key
       return @api_key if @api_key
       message, retry_count = nil, 0
-      email = highline.choose(config.emails) do |menu|
+      email = highline.choose(*config.emails) do |menu|
         menu.header = "Pivotal Tracker email"
         menu.default = config.last_email
         menu.choice("Enter new") { highline.ask("New Email: ") }

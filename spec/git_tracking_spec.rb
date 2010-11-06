@@ -25,8 +25,8 @@ describe GitTracking do
 
     it "should require a story" do
       the_story = mock('story', :name => 'Best feature evar', :id => 12345)
-      GitTracking.stub(:story_id).and_return(nil)
-      GitTracking.class_eval {@story = nil}
+      GitTracking.stub(:story_id).and_return("")
+      GitTracking.stub(:get_story).and_return(nil)
       GitTracking.highline.should_receive(:ask).with("Please enter a valid Pivotal Tracker story id: ", an_instance_of(Proc)).and_return(the_story)
       GitTracking.story.should == the_story
     end
