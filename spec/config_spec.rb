@@ -89,6 +89,16 @@ describe GitTracking::Config do
     `git config git-tracking.last-api-key`.chomp.should == '123444'
   end
 
+  it "#last_email should return the email that corresponds to the last api key used" do
+    config.instance_eval do
+      @config[:keys] = {
+        "foo@bar.com" => "987125jf"
+      }
+    end
+    system "git config git-tracking.last-api-key '987125jf'"
+    config.last_email.should == "foo@bar.com"
+  end
+
   describe "#project_id" do
     it "should return the project_id" do
       config.instance_eval { @config[:project_id] = '7472' }

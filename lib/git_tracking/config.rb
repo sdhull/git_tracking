@@ -23,6 +23,10 @@ class GitTracking
       @config[:keys].keys
     end
 
+    def last_email
+      @config[:keys].invert[last_api_key].first
+    end
+
     def author
       `git config user.name`.chomp
     end

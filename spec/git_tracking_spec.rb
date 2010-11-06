@@ -153,9 +153,9 @@ describe GitTracking do
 
   describe ".api_key" do
     before(:each) { GitTracking.instance_eval{ @api_key = nil} }
+
     it "should prompt for a pivotal login" do
       GitTracking.config.stub(:emails).and_return(["steve@home.com", "john@doe.com"])
-      GitTracking.config.should_receive(:add_email)
       GitTracking.config.should_receive(:key_for_email).with("other@work.net").ordered.and_return(nil)
       GitTracking.config.should_receive(:key_for_email).with("other@work.net", "0987654567").ordered
       GitTracking.highline.should_receive(:choose).with(["steve@home.com", "john@doe.com"]).and_return("other@work.net")
@@ -212,7 +212,7 @@ describe GitTracking do
     it "should prompt you to enter an alternate author, but allow you to dismiss" do
       GitTracking.config.stub(:author).and_return("Steve & Ghost Co-Pilot")
       GitTracking.highline.should_receive(:say).with("git author set to: Steve & Ghost Co-Pilot")
-      GitTracking.highline.should_receive(:ask).with("Hit enter to confirm author, or enter new author: ").and_return("")
+      GitTracking.highline.should_receive(:ask).with("Hit enter to confirm author, or enter new author: ").and_return("Steve & Ghost Co-Pilot")
       GitTracking.author.should == "Steve & Ghost Co-Pilot"
     end
 

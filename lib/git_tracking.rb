@@ -102,8 +102,9 @@ class GitTracking
       return @author if @author
       if (@author = config.author) != ""
         highline.say("git author set to: #{@author}")
-        new_author = highline.ask("Hit enter to confirm author, or enter new author: ")
-        @author = new_author if new_author != ""
+        @author = highline.ask("Hit enter to confirm author, or enter new author: ") do |q|
+          q.default = @author
+        end
       else
         @author = highline.ask("Please enter the git author: ")
       end
@@ -115,6 +116,7 @@ class GitTracking
       message, retry_count = nil, 0
       email = highline.choose(config.emails) do |menu|
         menu.header = "Pivotal Tracker email"
+        menu.default = config.last_email
         menu.choice("Enter new") { highline.ask("New Email: ") }
       end
       unless @api_key = config.key_for_email(email.to_s)
