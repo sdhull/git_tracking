@@ -45,10 +45,11 @@ STRING
   end
 
   it ".post_commit should create a comment on the story with the commit msg and hash" do
+    story = mock("story")
     notes = mock("notes")
-    GitTracking.stub(:story)
+    GitTracking.stub(:get_story).and_return(story)
     GitTracking.should_not_receive(:story_id)
-    GitTracking.story.should_receive(:notes).and_return(notes)
+    story.should_receive(:notes).and_return(notes)
     GitTracking.config.should_receive(:last_commit_info).and_return("984752 [#27491] Best commit evar")
     notes.should_receive(:create).with(:text => "984752 [#27491] Best commit evar")
     GitTracking.post_commit

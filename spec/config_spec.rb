@@ -109,8 +109,8 @@ describe GitTracking::Config do
     it "should return info about the last commit" do
       f = File.new("foo.txt", "w") {|f| f.puts "lalala"}
       system "git add foo.txt"
-      system "git commit -m 'best commit evar'"
-      config.last_commit_info.should match(/\w{6,8} best commit evar/)
+      system "git commit -m '[#1235] Story info\n  - best commit evar'"
+      config.last_commit_info.should match(/commit \w{40,40}\n      - best commit evar/)
     end
   end
 

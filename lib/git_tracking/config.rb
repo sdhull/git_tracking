@@ -29,7 +29,8 @@ class GitTracking
     end
 
     def last_commit_info
-      `git log -n 1 --oneline --abbrev-commit`
+      info = `git log -n 1`.split("\n")
+      info = "#{info.first}\n#{info.last}"
     end
 
     def author
