@@ -155,7 +155,7 @@ class GitTracking
     end
 
     def get_story(id)
-      pivotal_project.stories.find(id.to_i)
+      pivotal_project.stories.find(id.to_i) rescue nil
     end
   end
 end
