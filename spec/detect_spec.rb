@@ -2,6 +2,7 @@ require 'lib/git_tracking'
 
 describe GitTracking, "detect" do
   before(:all) do
+    File.rename ".git_tracking", ".git_tracking.real" if File.exists?(".git_tracking")
     File.rename ".git", ".git_old" if File.exists? ".git"
   end
 
@@ -11,19 +12,23 @@ describe GitTracking, "detect" do
 
   after(:each) do
     File.delete "foo.txt" if File.exists? "foo.txt"
+    File.delete ".git_tracking" if File.exists? ".git_tracking"
     do_cmd "rm -rf .git" if File.exists? ".git"
   end
 
   after(:all) do
     File.rename ".git_old", ".git" if File.exists? ".git_old"
+    File.rename ".git_tracking.real", ".git_tracking" if File.exists?(".git_tracking.real")
   end
 
   describe ".detect_debuggers" do
     context "configured to reject commits with debuggers" do
       it "should detect debuggers and raise DebuggerException" do
         GitTracking.config.stub(:raise_on_debugger).and_return(true)
-        make_foo_file "debugger"
+        make_file "foo.txt", "debugger"
+        make_file ".git_tracking", "debugger"
         do_cmd "git add foo.txt"
+        do_cmd "git add .git_tracking"
         GitTracking.highline.should_receive("say")
         GitTracking.highline.should_receive("say").with("foo.txt")
         lambda{GitTracking.detect_debuggers}.should(
@@ -34,8 +39,10 @@ describe GitTracking, "detect" do
     context "configured to simply warn about commits with debuggers" do
       it "should detect debuggers" do
         GitTracking.config.stub(:raise_on_debugger).and_return(false)
-        make_foo_file "debugger"
+        make_file "foo.txt", "debugger"
+        make_file ".git_tracking", "debugger"
         do_cmd "git add foo.txt"
+        do_cmd "git add .git_tracking"
         GitTracking.highline.should_receive("say")
         GitTracking.highline.should_receive("say").with("foo.txt")
         lambda{GitTracking.detect_debuggers}.should_not raise_error
@@ -47,7 +54,7 @@ describe GitTracking, "detect" do
     context "configured to reject commits with incomplete merges" do
       it "should detect incomplete merges and raise IncompleteMergeException" do
         GitTracking.config.stub(:raise_on_incomplete_merge).and_return(true)
-        make_foo_file "<<<<<<<", "your changes", "=======", "my changes", ">>>>>>>"
+        make_file "foo.txt", "<<<<<<<", "your changes", "=======", "my changes", ">>>>>>>"
         do_cmd "git add foo.txt"
         GitTracking.highline.should_receive("say")
         GitTracking.highline.should_receive("say").with("foo.txt")
@@ -59,7 +66,7 @@ describe GitTracking, "detect" do
     context "configured to simply warn about commits with incomplete merges" do
       it "should detect incomplete merges and raise IncompleteMergeException" do
         GitTracking.config.stub(:raise_on_incomplete_merge).and_return(false)
-        make_foo_file "<<<<<<<", "your changes", "=======", "my changes", ">>>>>>>"
+        make_file "foo.txt", "<<<<<<<", "your changes", "=======", "my changes", ">>>>>>>"
         do_cmd "git add foo.txt"
         GitTracking.highline.should_receive("say")
         GitTracking.highline.should_receive("say").with("foo.txt")
@@ -70,8 +77,8 @@ describe GitTracking, "detect" do
   end
 end
 
-def make_foo_file(*content)
-  f = File.new("foo.txt", "w")
+def make_file(name, *content)
+  f = File.new(name, "w")
   f.puts *content
   f.close
 end

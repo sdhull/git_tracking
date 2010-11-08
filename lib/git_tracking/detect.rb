@@ -1,9 +1,11 @@
 class GitTracking
   class << self
     def detect_debuggers
-      if (messages = `git diff-index --cached -Sdebugger --name-only HEAD`.chomp) != ""
+      file_names = `git diff-index --cached -Sdebugger --name-only HEAD`.chomp
+      file_names = file_names.gsub(".git_tracking\n",'')
+      if file_names != ""
         highline.say highline.color("The following files have 'debugger' statements in them: ", :red)
-        highline.say messages
+        highline.say file_names
         raise DebuggerException,
           "Please remove debuggers prior to committing" if config.raise_on_debugger
       end
