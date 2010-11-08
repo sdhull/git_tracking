@@ -1,0 +1,70 @@
+Git Tracking!
+============
+
+## Purpose
+`git_tracking` is a gem whose primary purpose is to
+provide (and enforce) tight integration between
+Pivotal Tracker and git for your project.
+
+At my office, we have all agreed that we shouldn't
+commit code that doesn't have an associated story
+in Pivotal Tracker.  Further, we tend to work on
+code at our glamorous (and blazingly fast) iMac
+pairing stations.  Therefore, we have two needs which
+this gem aims to satisfy:
+
+  1. To always know *who* was the author of a given
+  commit. ('Pairingstation1' is not good enough.)
+  2. To always know *which* story a given commit was
+  intended to fix/implement.
+  3. Bonus: While in Tracker, to be able to see
+  which commits are tied to a given story.
+
+## Installation
+
+    gem install git_tracking
+    git_tracking # this installs the git hooks and .git_tracking config file
+
+## Usage
+Just use git as normal, and you will be prompted for
+stuff.
+
+For example:
+
+    ! g commit -m "Making detect ignore .git_tracking file"
+    The following files have 'debugger' statements in them:
+    spec/detect_spec.rb
+    Git Author (default will be: Steve & Ghost Co-Pilot):
+    1. Enter new
+    ?  1
+    New git author: Steve
+    Pivotal Tracker email (default is: ):
+    1. Enter new
+    ?  1
+    New Email: john@doe.net
+    Enter your PivotalTracker password: xxxxxxx
+    Please enter the PivotalTracker project id for this project
+    137119
+    Found a valid story id in your branch or commit: 6131989 - Bugfixing
+    Hit enter to confirm story id 6131989, or enter some other story id: |6131989| 6132035
+    [master 2162139] [#6132035] Make sure that detect_* ignores .git_tracking file
+     2 files changed, 17 insertions(+), 8 deletions(-)
+
+You can set `git_tracking` to raise (ie reject your
+commit) when it detects that you are about to commit
+a `debugger` or an incomplete merge (`<<<<<<<` or `>>>>>>>`).
+
+All config options are in the `.git_tracking` file.
+
+## BEWARE!!
+
+`git_tracking` will store your api token for tracker
+in the `.git_tracking` file.  This is probably fine
+for private repo's where you know everyone who
+has access, but if you are committing to a public
+repo, you may want to put the `.git_tracking` file
+in your .gitignore.
+
+If you do accidentally make your PivotalTracker
+token public, I believe you request that they
+generate a new one for you.
