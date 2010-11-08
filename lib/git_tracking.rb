@@ -2,7 +2,11 @@ this_dir = File.expand_path(File.dirname(__FILE__))
 $:.unshift this_dir unless $:.include? this_dir
 
 # stdlib
-require 'ftools'
+if RUBY_VERSION.match "1.9"
+  require 'fileutils'
+else
+  require 'ftools'
+end
 require 'yaml'
 
 # gems

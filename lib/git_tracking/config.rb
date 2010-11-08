@@ -25,7 +25,7 @@ class GitTracking
     end
 
     def last_email
-      @config[:keys].invert[last_api_key].first
+      @config[:keys].invert[last_api_key]
     end
 
     def last_commit_info
