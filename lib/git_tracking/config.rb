@@ -28,9 +28,15 @@ class GitTracking
       @config[:keys].invert[last_api_key]
     end
 
-    def last_commit_info
-      info = `git log -n 1`.split("\n")
-      info = "#{info.first}\n#{info.last}"
+    def last_story_completed?
+      !!`git log -n 1`.match(/complete|finish/i)
+    end
+
+    def commits_for_last_story
+      commits = `git log --grep='#{self.last_story_id}'`.split(/^commit /).map{|c| c.split("\n")}
+      commits.each do |cl|
+        cl.map!(&:strip).reject!{|c| c == "" || c.match(/^\W*$|^Author|^Date|^\[#\d{6,7}\]/) }
+      end.flatten.join("\n")
     end
 
     def author

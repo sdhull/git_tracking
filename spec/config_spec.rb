@@ -1,4 +1,4 @@
-require 'lib/git_tracking'
+require 'git_tracking'
 
 describe GitTracking::Config do
   before(:all) do
@@ -15,7 +15,11 @@ describe GitTracking::Config do
     system "git config git-tracking.last-story-id '#{@orig_last_story_id}'"
   end
 
-  after(:each) { File.delete(".git_tracking") if File.exists?(".git_tracking") }
+  after(:each) do
+    File.delete "foo.txt" if File.exists? "foo.txt"
+    File.delete ".git_tracking" if File.exists?(".git_tracking")
+  end
+
   let(:config) { GitTracking::Config.new }
 
   it "#initialize should merge in config from .git_tracking file" do
@@ -91,29 +95,6 @@ describe GitTracking::Config do
     config.authors.should == ["Joe", "Bob", "Steve"]
   end
 
-  describe "#last_commit_info" do
-    before(:all) do
-      File.rename ".git", ".git_old" if File.exists? ".git"
-    end
-    before(:each) do
-      system "git init; git add README; git commit -m 'initial commit'"
-    end
-    after(:each) do
-      File.delete "foo.txt" if File.exists? "foo.txt"
-      system "rm -rf .git" if File.exists? ".git"
-    end
-    after(:all) do
-      File.rename ".git_old", ".git" if File.exists? ".git_old"
-    end
-
-    it "should return info about the last commit" do
-      f = File.new("foo.txt", "w") {|f| f.puts "lalala"}
-      system "git add foo.txt"
-      system "git commit -m '[#1235] Story info\n  - best commit evar'"
-      config.last_commit_info.should match(/commit \w{40,40}\n      - best commit evar/)
-    end
-  end
-
   it "#last_story_id should return the git-tracking.last-story-id from git config" do
     system "git config git-tracking.last-story-id '736741'"
     config.last_story_id.should == '736741'
@@ -142,6 +123,50 @@ describe GitTracking::Config do
     end
     system "git config git-tracking.last-api-key '987125jf'"
     config.last_email.should == "foo@bar.com"
+  end
+
+  context "specs that require messing with git" do
+    before(:all) do
+      File.rename ".git", ".git_old" if File.exists? ".git"
+    end
+    after(:all) do
+      File.rename ".git_old", ".git" if File.exists? ".git_old"
+    end
+    before(:each) do
+      system "git init; git add README; git commit -m 'initial commit'"
+    end
+    after(:each) do
+      system "rm -rf .git" if File.exists? ".git"
+      File.delete "foo.txt" if File.exists? "foo.txt"
+      File.delete "bar.txt" if File.exists? "bar.txt"
+    end
+
+    it "#commits_for_last_story should return all commit messages with a given story id" do
+      f = File.new("foo.txt", "w") {|f| f.puts "lalala"}
+      system "git add foo.txt"
+      system "git commit -m '[#1235932] Story info\n  - best commit evar'"
+      f = File.new("bar.txt", "w") {|f| f.puts "lalala"}
+      system "git add bar.txt"
+      system "git commit -m '[#1235932] Story info\n  - finishing the best feature evar'"
+      config.should_receive(:last_story_id).and_return('1235932')
+      config.commits_for_last_story.should match(/[0-9a-f]{40}\n- finishing the best feature evar\n[0-9a-f]{40}\n- best commit evar/)
+    end
+
+    describe "#last_story_completed?" do
+      it "should return true if the last commit message contains 'completed' or 'finished'" do
+        f = File.new("foo.txt", "w") {|f| f.puts "lalala"}
+        system "git add foo.txt"
+        system "git commit -m '[#1235] Story info\n  - Completes best commit evar'"
+        config.last_story_completed?.should be_true
+      end
+
+      it "should return false if the last commit message doesn't contain 'completed' or 'finished'" do
+        f = File.new("foo.txt", "w") {|f| f.puts "lalala"}
+        system "git add foo.txt"
+        system "git commit -m '[#1235] Story info\n  - best commit evar'"
+        config.last_story_completed?.should be_false
+      end
+    end
   end
 
   describe "#project_id" do

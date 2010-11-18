@@ -44,15 +44,47 @@ STRING
     end
   end
 
-  it ".post_commit should create a comment on the story with the commit msg and hash" do
-    story = mock("story")
-    notes = mock("notes")
-    GitTracking.stub(:get_story).and_return(story)
-    GitTracking.should_not_receive(:story_id)
-    story.should_receive(:notes).and_return(notes)
-    GitTracking.config.should_receive(:last_commit_info).and_return("984752 [#27491] Best commit evar")
-    notes.should_receive(:create).with(:text => "984752 [#27491] Best commit evar")
-    GitTracking.post_commit
+  describe ".post_commit" do
+    let(:story) {mock("story")}
+    let(:notes) {mock("notes")}
+    before(:each) do
+      GitTracking.config.stub(:last_api_key).and_return("12345")
+      GitTracking.stub(:get_story).and_return(story)
+      story.stub(:notes).and_return(notes)
+      GitTracking.should_not_receive(:story_id) # avoid double-prompting
+    end
+
+    it "should do nothing if the story is not finished" do
+      GitTracking.config.should_receive(:last_story_completed?).and_return(false)
+      GitTracking.highline.should_not_receive(:ask)
+      GitTracking.config.should_not_receive(:commits_for_story)
+      notes.should_not_receive(:create)
+      GitTracking.post_commit
+    end
+
+    it "should create a comment on the story with the commit msg and hash if the story is finished" do
+      commits = <<COMMITS
+commit 12345678
+  - Did stuff
+commit 98765456
+  - Did more stuff
+commit 97230182
+  - Finished stuff
+COMMITS
+      GitTracking.config.should_receive(:last_story_completed?).and_return(true)
+      GitTracking.highline.should_receive(:ask).with("Does this commit complete the story?", ["yes", "no"]).and_return("yes")
+      GitTracking.config.should_receive(:commits_for_last_story).and_return(commits)
+      notes.should_receive(:create).with(:text => commits)
+      GitTracking.post_commit
+    end
+
+    it "should allow the user to indicate the story was not finished" do
+      GitTracking.config.should_receive(:last_story_completed?).and_return(true)
+      GitTracking.highline.should_receive(:ask).with("Does this commit complete the story?", ["yes", "no"]).and_return("no")
+      GitTracking.config.should_not_receive(:commits_for_last_story)
+      notes.should_not_receive(:create)
+      GitTracking.post_commit
+    end
   end
 
   describe ".story" do
@@ -145,6 +177,7 @@ STRING
     it "should get the token" do
       project = mock("project")
       PivotalTracker::Project.should_receive(:find).and_return(project)
+      GitTracking.should_receive(:project_id).and_return("87655")
       GitTracking.should_receive(:api_key).and_return("alksjd9123lka")
       GitTracking.pivotal_project.should == project
     end

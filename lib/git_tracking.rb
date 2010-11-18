@@ -54,8 +54,15 @@ class GitTracking
 
     def post_commit
       @api_key = config.last_api_key
-      story = get_story(config.last_story_id)
-      story.notes.create(:text => config.last_commit_info)
+      if config.last_story_completed?
+        completed = GitTracking.highline.ask("Does this commit complete the story?", ["yes", "no"]) do |q|
+          q.default = "yes"
+        end
+        if completed == "yes"
+          story = get_story(config.last_story_id)
+          story.notes.create(:text => config.commits_for_last_story)
+        end
+      end
     end
 
     def pivotal_project

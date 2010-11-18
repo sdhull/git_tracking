@@ -1,4 +1,4 @@
-require 'lib/git_tracking'
+require 'git_tracking'
 
 describe GitTracking, "detect" do
   before(:all) do
