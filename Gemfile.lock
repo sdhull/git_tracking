@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    git_tracking (0.1.0)
+    git_tracking (0.1.2)
       highline
       pivotal-tracker
 

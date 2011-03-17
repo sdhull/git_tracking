@@ -43,12 +43,13 @@ class GitTracking
     end
 
     def prepare_commit_msg
-      author
-      commit_message
-      File.open(ARGV[0], "w") do |f|
-        f.puts story_info
-        f.puts
-        f.puts "  - #{commit_message}"
+      unless commit_message.include?("--no-gt")
+        author
+        File.open(ARGV[0], "w") do |f|
+          f.puts story_info
+          f.puts
+          f.puts "  - #{commit_message}"
+        end
       end
     end
 

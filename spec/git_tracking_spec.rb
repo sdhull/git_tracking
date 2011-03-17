@@ -11,6 +11,10 @@ describe GitTracking do
     File.delete("foo.txt") if File.exists?("foo.txt")
   end
 
+  after(:each) do
+    GitTracking.class_eval { @commit_message = nil }
+  end
+
   it ".pre_commit should call detect_debuggers and detect_incomplete_merges" do
     GitTracking.should_receive(:detect_debuggers)
     GitTracking.should_receive(:detect_incomplete_merges)
@@ -36,7 +40,21 @@ STRING
       ARGV = old_argv
     end
 
+    it "should skip everything if '--no-gt' option is detected" do
+      old_argv = ARGV
+      File.open("foo.txt", "w") do |f|
+        f.print "My awesome commit msg! --no-gt"
+      end
+      ARGV = ["foo.txt"]
+      GitTracking.should_not_receive :story_info
+      GitTracking.should_not_receive :author
+      GitTracking.prepare_commit_msg
+    end
+
     it "should call story_info and author" do
+      File.open("foo.txt", "w") do |f|
+        f.print "My awesome commit msg!"
+      end
       ARGV = ["foo.txt"]
       GitTracking.should_receive(:story_info).and_return "[#12345] Best feature evar"
       GitTracking.should_receive(:author)
